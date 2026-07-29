@@ -1,0 +1,695 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0a0e14" />
+    <meta
+      name="description"
+      content="객체 탐지, IoU, 임계값, 이미지 분할과 경계 책임을 이해하는 60분 인터랙티브 발표자료"
+    />
+    <title>찾아내기와 경계 긋기 | 섹션 3 발표자료</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="ambient ambient-a" aria-hidden="true"></div>
+    <div class="ambient ambient-b" aria-hidden="true"></div>
+
+    <header class="deck-header">
+      <button class="brand" id="overviewButton" aria-label="전체 슬라이드 보기">
+        <span class="brand-mark">03</span>
+        <span class="brand-copy">
+          <b>FIND / BOUND</b>
+          <small>찾아내기와 경계 긋기</small>
+        </span>
+      </button>
+      <div class="chapter-pill" id="chapterPill">OPENING</div>
+      <div class="header-actions">
+        <button class="icon-button" id="notesButton" aria-pressed="false" title="발표자 노트">N</button>
+        <button class="icon-button" id="fullscreenButton" title="전체 화면">↗</button>
+        <span class="counter"><b id="currentNumber">01</b><i>/</i><span id="totalNumber">37</span></span>
+      </div>
+    </header>
+
+    <main class="stage" id="stage">
+      <section class="slide active cover" data-chapter="OPENING" data-title="표지" aria-hidden="false">
+        <div class="eyebrow"><span>SECTION 03</span><span>COMPUTER VISION</span></div>
+        <div class="cover-grid">
+          <div>
+            <p class="kicker">“무엇인가?”에서 “어디까지인가?”로</p>
+            <h1>찾아내기와<br /><em>경계 긋기</em></h1>
+            <p class="lead">객체 탐지 · IoU · 임계값 · 이미지 분할</p>
+          </div>
+          <div class="hero-visual" aria-label="박스와 마스크를 표현한 추상 도식">
+            <div class="scan-grid"></div>
+            <div class="hero-object one"></div>
+            <div class="hero-object two"></div>
+            <div class="hero-box"><span>OBJECT · 0.87</span></div>
+            <div class="hero-mask"></div>
+            <div class="coordinate">x₁, y₁ → x₂, y₂</div>
+          </div>
+        </div>
+        <div class="cover-footer">
+          <div><b>60</b><span>MIN TEACHING</span></div>
+          <div><b>03</b><span>DUEL QUESTIONS</span></div>
+          <div><b>01</b><span>CORE IDEA</span></div>
+        </div>
+        <aside class="speaker-note"><b>1분</b> 오늘은 모델 이름을 외우는 시간이 아니라, 업무 질문에 맞는 ‘답의 모양’을 고르는 시간이라고 소개합니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="OPENING" data-title="오늘의 미션" aria-hidden="true">
+        <div class="slide-no">01 / MISSION</div>
+        <h2>오늘의 미션은 단 하나</h2>
+        <div class="mission-card">
+          <span>BEFORE</span>
+          <p>“탐지랑 분할… 더 정밀한 게 더 좋은 거 아닌가?”</p>
+          <div class="mission-arrow">→</div>
+          <span>AFTER</span>
+          <p><strong>업무 질문</strong>을 보고 박스·마스크·임계값·지표를 설명한다.</p>
+        </div>
+        <div class="timebar">
+          <div style="--w: 8"><b>5분</b><span>열기</span></div>
+          <div style="--w: 30"><b>18분</b><span>객체 탐지</span></div>
+          <div style="--w: 7"><b>4분</b><span>중간 활동</span></div>
+          <div style="--w: 28"><b>17분</b><span>이미지 분할</span></div>
+          <div style="--w: 14"><b>8분</b><span>예상문제</span></div>
+          <div style="--w: 8"><b>5분</b><span>정리·Q&A</span></div>
+        </div>
+        <aside class="speaker-note"><b>2분</b> 60분의 흐름을 공유하고, 중간 질문과 문제풀이에 적극 참여해 달라고 요청합니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="OPENING" data-title="학습 목표" aria-hidden="true">
+        <div class="slide-no">02 / TARGETS</div>
+        <h2>끝나고 이 4가지를 말할 수 있으면 성공</h2>
+        <div class="number-grid">
+          <article><b>01</b><h3>탐지 출력</h3><p>label · box · score를 읽고 decision을 붙인다.</p></article>
+          <article><b>02</b><h3>겹침 측정</h3><p>IoU를 계산하고 문턱에 따라 판정이 달라짐을 안다.</p></article>
+          <article><b>03</b><h3>답의 모양</h3><p>업무 질문에 박스와 마스크 중 무엇이 맞는지 고른다.</p></article>
+          <article><b>04</b><h3>경계 책임</h3><p>임계값과 경계 정의가 기술 설정이 아닌 정책임을 설명한다.</p></article>
+        </div>
+        <aside class="speaker-note"><b>2분</b> 마지막 모의대결 3문제가 이 네 목표를 확인하도록 설계됐다고 예고합니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="DETECTION" data-title="위치는 증거다" aria-hidden="true">
+        <div class="slide-no">03 / EVIDENCE</div>
+        <div class="split">
+          <div>
+            <p class="kicker">위치는 부가정보가 아니다</p>
+            <h2>값의 출처를<br />증명하는 <em>근거</em></h2>
+            <p class="big-copy">OCR 결과가 맞는지 다시 확인하려면 값만이 아니라 페이지와 좌표가 필요합니다.</p>
+          </div>
+          <div class="document-demo">
+            <div class="paper">
+              <span class="paper-line w80"></span><span class="paper-line w60"></span>
+              <span class="paper-line w90"></span><span class="paper-line w70"></span>
+              <div class="text-box"><b>₩ 128,000</b><small>p. 3 · [124, 388, 276, 426]</small></div>
+              <span class="paper-line w85"></span><span class="paper-line w50"></span>
+            </div>
+            <div class="evidence-flow">
+              <span>값</span><span>+</span><span>페이지</span><span>+</span><span>좌표</span><span>=</span><strong>감사 가능</strong>
+            </div>
+          </div>
+        </div>
+        <aside class="speaker-note"><b>2분</b> ‘글자를 찾는 위치’가 일반 물체를 찾는 기술로 이어진다는 연결고리를 설명합니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="DETECTION" data-title="분류와 탐지" aria-hidden="true">
+        <div class="slide-no">04 / QUESTION</div>
+        <h2>비슷해 보여도 <em>답의 모양</em>이 다르다</h2>
+        <div class="compare-panels">
+          <article class="compare-panel classification">
+            <span class="tag">CLASSIFICATION</span>
+            <div class="mini-scene"><i></i><i></i><i></i></div>
+            <h3>“이건 무슨 사진인가?”</h3>
+            <p>이미지 전체에 이름표 <b>하나</b></p>
+            <code>warehouse</code>
+          </article>
+          <div class="versus">VS</div>
+          <article class="compare-panel detection">
+            <span class="tag">OBJECT DETECTION</span>
+            <div class="mini-scene boxes"><i></i><i></i><i></i></div>
+            <h3>“무엇이 어디에 있나?”</h3>
+            <p>개수가 정해지지 않은 <b>목록</b></p>
+            <code>[person, pallet, pallet, …]</code>
+          </article>
+        </div>
+        <aside class="speaker-note"><b>2분</b> 물체가 0개일 수도 17개일 수도 있다는 점이 객체 탐지의 핵심 난점이라고 강조합니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="DETECTION" data-title="탐지 방식의 흐름" aria-hidden="true">
+        <div class="slide-no">05 / EVOLUTION</div>
+        <h2>수천 번 들여다보기 → <em>한 번에 보기</em></h2>
+        <div class="evolution">
+          <article>
+            <span>01</span><h3>반복 창 분류</h3>
+            <div class="window-grid"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <p>작은 창을 옮기며 매번 분류</p><small>느림 · 크기/각도 변화에 취약</small>
+          </article>
+          <div class="flow-arrow">→</div>
+          <article>
+            <span>02</span><h3>R-CNN 계열</h3>
+            <div class="proposal-demo"><i></i><i></i><i></i></div>
+            <p>후보 영역 → 분류·보정</p><small>정교한 2단계 · 후보 병목</small>
+          </article>
+          <div class="flow-arrow">→</div>
+          <article class="highlight">
+            <span>03</span><h3>YOLO 계열</h3>
+            <div class="yolo-demo"><i></i><i></i><i></i></div>
+            <p>한 번의 처리로 함께 예측</p><small>빠른 1단계 · 실시간 활용</small>
+          </article>
+        </div>
+        <div class="bottom-line">둘의 최종 출력은 같다 → <b>박스 + 클래스 + 신뢰도</b></div>
+        <aside class="speaker-note"><b>3분</b> 계보를 암기하기보다 어떤 출력이 나오고 무엇을 의미하는지 이해하는 것이 목표라고 선을 긋습니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="DETECTION" data-title="YOLO 계보와 책임" aria-hidden="true">
+        <div class="slide-no">06 / CONTEXT</div>
+        <h2>같은 YOLO라는 이름, <em>구분해서 말하기</em></h2>
+        <div class="timeline">
+          <article><time>2016</time><h3>최초 YOLO</h3><p>Redmon 외 연구진<br />CVPR 논문 · Darknet</p></article>
+          <i></i>
+          <article><time>NOW</time><h3>Ultralytics 생태계</h3><p>현대 모델을 묶은<br />별도 Python·CLI 구현</p></article>
+          <i></i>
+          <article class="ethics"><time>책임</time><h3>쉽게 실행 ≠ 써도 됨</h3><p>군사 표적화·사생활 침해<br />사용 맥락을 먼저 검토</p></article>
+        </div>
+        <blockquote>“사전학습 모델을 실행할 수 있다”와 “사람을 촬영·판정해도 된다”는 서로 다른 질문이다.</blockquote>
+        <aside class="speaker-note"><b>2분</b> 역사적 YOLO와 현재 도구를 구분하고, 사람을 대상으로 할 때 동의·보관·오판 책임을 질문합니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="DETECTION" data-title="공통 구조" aria-hidden="true">
+        <div class="slide-no">07 / ANATOMY</div>
+        <h2>공통 뼈대는 <em>세 부분</em>으로 읽는다</h2>
+        <div class="pipeline">
+          <article class="backbone">
+            <span>BACKBONE</span><h3>특징을 뽑는다</h3>
+            <div class="feature-stack"><i></i><i></i><i></i></div>
+            <p>선 · 질감 · 형태</p>
+          </article>
+          <div class="connector">→</div>
+          <article class="neck">
+            <span>NECK</span><h3>크기를 섞는다</h3>
+            <div class="scale-stack"><i></i><i></i><i></i></div>
+            <p>작은 물체 ↔ 큰 물체</p>
+          </article>
+          <div class="connector">→</div>
+          <article class="head">
+            <span>HEAD</span><h3>답을 만든다</h3>
+            <div class="head-branches"><b>BOX</b><b>MASK</b><b>POSE</b></div>
+            <p>작업별 출력 자료형</p>
+          </article>
+        </div>
+        <div class="callout">Detection · Segmentation · Pose의 차이는 <b>마지막 가지가 만드는 답</b>에 있다.</div>
+        <aside class="speaker-note"><b>3분</b> 같은 특징을 공유해도 head가 박스·마스크·관절점처럼 다른 자료형을 만든다고 설명합니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="DETECTION" data-title="탐지 출력 3종" aria-hidden="true">
+        <div class="slide-no">08 / OUTPUT</div>
+        <h2>탐지 결과는 <em>세 줄짜리 목록</em></h2>
+        <div class="output-layout">
+          <div class="bbox-scene">
+            <div class="scene-object person"></div>
+            <div class="scene-object crate"></div>
+            <div class="bbox person-box"><span>person · 0.87</span></div>
+            <div class="bbox crate-box"><span>pallet · 0.72</span></div>
+          </div>
+          <div class="code-card">
+            <div><span>label</span><code>person</code><small>무엇인가</small></div>
+            <div><span>box</span><code>x₁, y₁, x₂, y₂</code><small>어디인가</small></div>
+            <div><span>score</span><code>0.87</code><small>얼마나 맞아 보이나</small></div>
+          </div>
+        </div>
+        <aside class="speaker-note"><b>3분</b> 좌표는 보통 왼쪽 위와 오른쪽 아래 꼭짓점이며, 사진 한 장의 결과는 이 항목들의 목록이라고 설명합니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="DETECTION" data-title="신뢰도 해석" aria-hidden="true">
+        <div class="slide-no">09 / CONFIDENCE</div>
+        <div class="myth">
+          <span class="myth-label">오해</span>
+          <p><del>score 0.87 = 사람이 맞을 확률 87%</del></p>
+        </div>
+        <h2>신뢰도는 정답 확률이 아니라<br /><em>모델 패턴과의 적합도 요약</em></h2>
+        <div class="scenario-row">
+          <article><b>0.91</b><p>화면 밖으로 밀린 안전모</p><small>높아도 업무 질문을 못 풀 수 있음</small></article>
+          <article><b>0.48</b><p>위험 구역의 흐릿한 사람</p><small>낮아도 버리면 큰 비용일 수 있음</small></article>
+        </div>
+        <div class="fourth-line"><span>모델이 주지 않는 네 번째 줄</span><strong>decision: 이 결과로 무슨 조치를 할 것인가?</strong></div>
+        <aside class="speaker-note"><b>3분</b> 점수의 의미와 업무 조치는 분리해야 하며, 조치는 사람이 정책으로 붙인다고 강조합니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="DETECTION" data-title="시각화의 함정" aria-hidden="true">
+        <div class="slide-no">10 / DISPLAY</div>
+        <h2>보이는 것이 <em>모델의 전부</em>는 아니다</h2>
+        <div class="display-demo">
+          <div class="visual-output">
+            <div class="desk-object keyboard"></div><div class="desk-object cup"></div><div class="desk-object mouse"></div>
+            <div class="bbox b1"><span>keyboard</span></div><div class="bbox b2"><span>cup</span></div><div class="bbox b3"><span>mouse</span></div>
+          </div>
+          <div class="display-copy">
+            <div><b>01</b><p>둥근 물체에도 네모가 씌워진다.</p></div>
+            <div><b>02</b><p>학습 클래스에 없는 대상은 목록에 없다.</p></div>
+            <div><b>03</b><p>점수를 숨기면 모델이 안 준 것처럼 보인다.</p></div>
+          </div>
+        </div>
+        <p class="caption">시각화는 <b>만든 사람이 보여 주기로 한 것</b>만 보여 준다.</p>
+        <aside class="speaker-note"><b>2분</b> 박스 안에는 배경도 들어가며, 시각화에 score가 안 보인다고 모델이 score를 내지 않은 것은 아니라고 짚습니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="DETECTION" data-title="박스의 역할" aria-hidden="true">
+        <div class="slide-no">11 / LIMIT</div>
+        <div class="quote-slide">
+          <span>BOX ≠ MEASUREMENT</span>
+          <h2>박스는 “<em>여기를 보세요</em>”라는<br />위치 후보다.</h2>
+          <p>“이만큼입니다”라는 계측값이 아니다.</p>
+          <div class="warning-row">
+            <span>✕ 박스 면적 = 결함 면적</span>
+            <span>✕ 박스 크기 = 실제 크기</span>
+            <span>✕ 박스 개수 = 재고량</span>
+          </div>
+        </div>
+        <aside class="speaker-note"><b>2분</b> 카메라 거리·각도·겹침 때문에 박스 면적과 실제 면적은 같지 않다고 설명합니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="DETECTION" data-title="IoU 개념" aria-hidden="true">
+        <div class="slide-no">12 / IOU</div>
+        <div class="split">
+          <div>
+            <p class="kicker">INTERSECTION over UNION</p>
+            <h2>겹침을 재는 자,<br /><em>IoU</em></h2>
+            <div class="formula">IoU = <span>교집합</span> / <span>합집합</span></div>
+            <ul class="clean-list">
+              <li><b>1</b> 완전히 포개짐</li>
+              <li><b>0</b> 전혀 겹치지 않음</li>
+              <li><b>주의</b> 합집합에서 겹침은 한 번 빼기</li>
+            </ul>
+          </div>
+          <div class="iou-demo">
+            <div class="iou-box truth"><span>정답</span></div>
+            <div class="iou-box prediction"><span>예측</span></div>
+            <div class="iou-intersection"><span>교집합</span></div>
+          </div>
+        </div>
+        <aside class="speaker-note"><b>3분</b> 완벽히 같은 박스만 정답으로 볼 수 없어서 ‘얼마나 겹쳤는지’를 연속적인 수치로 만든다고 설명합니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="DETECTION" data-title="IoU 계산" aria-hidden="true">
+        <div class="slide-no">13 / CALCULATE</div>
+        <h2>직접 계산해 봅시다</h2>
+        <div class="calculation">
+          <div class="calc-visual">
+            <div class="rect r-truth">200 × 130</div>
+            <div class="rect r-pred">200 × 130</div>
+            <div class="rect-overlap">160 × 112</div>
+          </div>
+          <div class="calc-steps">
+            <p><span>01</span>겹친 면적 <b>160 × 112 = 17,920</b></p>
+            <p><span>02</span>각 박스 면적 <b>200 × 130 = 26,000</b></p>
+            <p><span>03</span>합집합 <b>26,000 + 26,000 − 17,920 = 34,080</b></p>
+            <p class="result"><span>04</span>IoU <strong>17,920 / 34,080 ≈ 0.53</strong></p>
+          </div>
+        </div>
+        <div class="threshold-verdict"><span>문턱 0.50 → <b>통과</b></span><span>같은 박스</span><span>문턱 0.75 → <b>탈락</b></span></div>
+        <aside class="speaker-note"><b>4분</b> 합집합에서 겹친 면적을 한 번 빼는 이유를 질문한 뒤 계산합니다. IoU는 측정값이고 판정은 문턱이 만든다는 결론으로 마무리합니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="DETECTION" data-title="IoU 문턱" aria-hidden="true">
+        <div class="slide-no">14 / THRESHOLD</div>
+        <h2>IoU는 측정, <em>문턱은 판단</em></h2>
+        <div class="threshold-scale">
+          <div class="scale-track"><i style="left:30%"></i><i style="left:50%"></i><i style="left:70%"></i></div>
+          <div class="scale-labels"><span>0.30<br /><small>대략적 위치</small></span><span>0.50<br /><small>보행자 예시</small></span><span>0.70<br /><small>차량 예시</small></span></div>
+        </div>
+        <div class="question-card">
+          <span>성능표를 볼 때 첫 질문</span>
+          <h3>“그 점수, <em>어떤 IoU 문턱</em>에서 쟀나요?”</h3>
+        </div>
+        <p class="fineprint">같은 자율주행 데이터 안에서도 클래스와 업무 목적에 따라 문턱은 달라질 수 있습니다.</p>
+        <aside class="speaker-note"><b>2분</b> 문턱이 높다고 무조건 좋은 것이 아니라, 필요한 위치 정밀도가 업무마다 다르다고 설명합니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="DETECTION" data-title="신뢰도 임계값" aria-hidden="true">
+        <div class="slide-no">15 / POLICY</div>
+        <h2>임계값은 기술 설정이 아니라 <em>정책</em></h2>
+        <div class="policy-table">
+          <div class="table-head"><span>임계값</span><span>보통의 변화</span><span>대신 치르는 비용</span></div>
+          <div><b class="low">낮춤 ↓</b><span>후보 ↑ · 미탐 ↓ 가능</span><span>오탐과 사람 검토량 ↑</span></div>
+          <div><b class="high">높임 ↑</b><span>후보 ↓ · 오탐 ↓ 가능</span><span>놓치면 안 되는 대상의 미탐 ↑</span></div>
+        </div>
+        <div class="policy-examples">
+          <article><span>화재·안전</span><b>낮은 선에서 시작</b><p>놓침의 비용이 큼</p></article>
+          <article><span>자동 결제·승인</span><b>높은 선에서 시작</b><p>헛짚음의 비용이 큼</p></article>
+          <article><span>개체 수 통계</span><b>양쪽 비용 비교</b><p>과소·과대 모두 문제</p></article>
+        </div>
+        <aside class="speaker-note"><b>3분</b> 경향일 뿐 법칙은 아니므로 라벨이 있는 표본에서 여러 임계값의 정밀도·재현율·업무 비용을 비교해야 한다고 설명합니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="DETECTION" data-title="3구간 운영" aria-hidden="true">
+        <div class="slide-no">16 / OPERATE</div>
+        <h2>하나의 선 대신 <em>세 구간</em>으로 운영하기</h2>
+        <div class="triage">
+          <div class="reject"><span>0.00 — 0.35</span><b>제외</b><p>근거 부족</p></div>
+          <div class="review"><span>0.35 — 0.80</span><b>사람 검토</b><p>맞는 후보와 틀린 후보가 섞임</p></div>
+          <div class="auto"><span>0.80 — 1.00</span><b>자동 처리</b><p>검증된 범위에서만</p></div>
+        </div>
+        <div class="callout">회색지대의 정답은 <b>점수만으로 알 수 없다.</b> 정답 라벨과 대조해야 한다.</div>
+        <aside class="speaker-note"><b>2분</b> 숫자는 예시이며 현장 데이터로 조정해야 한다고 분명히 말합니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="ACTIVITY" data-title="박스인가 마스크인가" aria-hidden="true">
+        <div class="slide-no">17 / MID CHECK</div>
+        <h2>박스인가, 마스크인가?</h2>
+        <p class="instruction">먼저 이유를 한 문장으로 말한 뒤 정답을 여세요.</p>
+        <div class="quiz-columns">
+          <article class="quiz-card">
+            <span>A</span><h3>창고 사진에서 파렛트 개수를 세고 사람이 다시 볼 위치를 표시한다.</h3>
+            <button class="reveal-button" data-reveal="answer-a">정답 보기</button>
+            <div class="answer" id="answer-a"><b>박스</b><p>개수와 대략적인 위치면 충분합니다.</p></div>
+          </article>
+          <article class="quiz-card">
+            <span>B</span><h3>설비 표면의 벗겨진 코팅이 전체 면적의 몇 %인지 잰다.</h3>
+            <button class="reveal-button" data-reveal="answer-b">정답 보기</button>
+            <div class="answer" id="answer-b"><b>마스크</b><p>대상의 픽셀 면적이 필요합니다.</p></div>
+          </article>
+        </div>
+        <aside class="speaker-note"><b>4분</b> 1분 개인 생각 → 1분 옆 사람 설명 → 2분 답 확인. 답보다 ‘업무가 요구한 출력’을 근거로 말하게 합니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="SEGMENTATION" data-title="박스가 못 푸는 질문" aria-hidden="true">
+        <div class="slide-no">18 / WHY MASK</div>
+        <h2>박스로는 답할 수 없는 <em>세 가지</em></h2>
+        <div class="three-reasons">
+          <article><div class="reason-visual area"></div><b>01 · 넓이</b><h3>얼마나 차지하는가?</h3><p>병변 · 침수 · 코팅 손상</p></article>
+          <article><div class="reason-visual shape"></div><b>02 · 불규칙한 형태</b><h3>정확히 어디까지인가?</h3><p>균열 · 머리카락 · 액체</p></article>
+          <article><div class="reason-visual overlap"></div><b>03 · 겹친 개체</b><h3>서로 어떻게 나뉘는가?</h3><p>쌓인 부품 · 붙어 선 사람</p></article>
+        </div>
+        <aside class="speaker-note"><b>2분</b> 대각선 균열 박스의 대부분이 멀쩡한 콘크리트가 될 수 있다는 예로 박스 면적의 한계를 설명합니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="SEGMENTATION" data-title="분할의 출력" aria-hidden="true">
+        <div class="slide-no">19 / PIXELS</div>
+        <div class="split">
+          <div>
+            <p class="kicker">IMAGE SEGMENTATION</p>
+            <h2>픽셀 하나하나에<br /><em>라벨을 붙인다</em></h2>
+            <p class="big-copy">200만 화소 사진이라면, 200만 번의 주장을 한꺼번에 내놓는 셈입니다.</p>
+            <div class="formula-card">출력 = 원본과 같은 크기의 <b>마스크</b></div>
+          </div>
+          <div class="pixel-mask">
+            <div class="pixel-grid"></div>
+            <div class="mask-region m1"></div><div class="mask-region m2"></div><div class="mask-region m3"></div>
+            <span class="pixel-label l1">대상 A</span><span class="pixel-label l2">대상 B</span>
+          </div>
+        </div>
+        <aside class="speaker-note"><b>2분</b> 박스 좌표 네 개보다 훨씬 많은 결정을 내리므로 계산과 책임이 커진다고 연결합니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="SEGMENTATION" data-title="분할 3종" aria-hidden="true">
+        <div class="slide-no">20 / THREE TASKS</div>
+        <h2>같은 장면, 다른 질문</h2>
+        <div class="seg-types">
+          <article>
+            <span>SEMANTIC</span><div class="people semantic"><i></i><i></i><i></i></div>
+            <h3>시맨틱 분할</h3><p>같은 종류는 한 색</p><small>면적 ○ · 개수 ×</small>
+          </article>
+          <article>
+            <span>INSTANCE</span><div class="people instance"><i></i><i></i><i></i></div>
+            <h3>인스턴스 분할</h3><p>개체마다 다른 색</p><small>개수 ○ · 개별 면적 ○</small>
+          </article>
+          <article>
+            <span>PANOPTIC</span><div class="people panoptic"><i></i><i></i><i></i></div>
+            <h3>파놉틱 분할</h3><p>배경까지 빈틈없이</p><small>전체 해석 ○ · 비용 ↑</small>
+          </article>
+        </div>
+        <aside class="speaker-note"><b>4분</b> 기준은 ‘같은 종류를 뭉뚱그리는가, 개체를 세는가, 배경까지 채우는가’라고 정리합니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="SEGMENTATION" data-title="업무 질문과 분할 유형" aria-hidden="true">
+        <div class="slide-no">21 / CHOOSE</div>
+        <h2>모델 이름보다 <em>질문의 동사</em>를 보자</h2>
+        <div class="mapping">
+          <div><span>“밭에서 작물이 차지하는 <b>면적</b>은?”</span><i>→</i><strong>시맨틱</strong></div>
+          <div><span>“작물이 <b>몇 포기</b>이고 각각 얼마나 자랐나?”</span><i>→</i><strong>인스턴스</strong></div>
+          <div><span>“주행 화면 <b>전체</b>를 빠짐없이 해석하라.”</span><i>→</i><strong>파놉틱</strong></div>
+        </div>
+        <div class="warning-banner">필요한 것보다 높은 과제를 고르면 <b>라벨링 비용이 몇 배</b>로 뛴다.</div>
+        <aside class="speaker-note"><b>3분</b> ‘면적·몇 개·전체’ 같은 동사가 과제 선택의 단서라고 알려줍니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="SEGMENTATION" data-title="매끈한 마스크의 함정" aria-hidden="true">
+        <div class="slide-no">22 / AMBIGUITY</div>
+        <h2>매끈한 경계는 <em>현실의 선명함</em>이 아니다</h2>
+        <div class="ambiguity">
+          <div class="ambiguous-photo">
+            <div class="glass"></div><div class="cable"></div><div class="shadow"></div>
+            <span>원본: 투명 · 흐림 · 그림자</span>
+          </div>
+          <div class="ambiguous-arrow">→</div>
+          <div class="clean-mask">
+            <div class="glass"></div><div class="cable"></div><div class="shadow"></div>
+            <span>마스크: 반드시 한쪽을 선택</span>
+          </div>
+        </div>
+        <blockquote>마스크의 선명함은 누군가가 애매한 지점에서 <b>강제로 내린 결정</b>의 흔적이다.</blockquote>
+        <aside class="speaker-note"><b>2분</b> 유리컵·케이블·그림자 예시로 사람마다 경계를 다르게 칠 수 있고, 모델은 그 불일치까지 배운다고 설명합니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="SEGMENTATION" data-title="인코더 디코더" aria-hidden="true">
+        <div class="slide-no">23 / STRUCTURE</div>
+        <h2>무엇인지 보려면 내려가고,<br /><em>어디까지인지 보려면 올라온다</em></h2>
+        <div class="unet">
+          <div class="u-col"><i></i><span>원본</span></div>
+          <div class="u-col down"><i></i><span>특징</span></div>
+          <div class="u-col bottleneck"><i></i><span>문맥</span></div>
+          <div class="u-col up"><i></i><span>복원</span></div>
+          <div class="u-col"><i></i><span>마스크</span></div>
+          <div class="skip s1">세밀한 위치 특징</div><div class="skip s2">SKIP CONNECTION</div>
+        </div>
+        <div class="bottom-line">해상도를 줄이면 대상을 잘 보지만 경계가 흐려진다 → 앞의 세밀한 특징을 다시 연결한다.</div>
+        <aside class="speaker-note"><b>2분</b> 모든 모델이 정확히 같은 구조는 아니지만, 인코더·디코더와 스킵 연결이 분할의 대표적 직관이라고 설명합니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="SEGMENTATION" data-title="정밀도의 비용" aria-hidden="true">
+        <div class="slide-no">24 / COST</div>
+        <h2>분할은 더 좋은 기술이 아니라 <em>더 비싼 기술</em></h2>
+        <div class="cost-cards">
+          <article><b>01</b><span>LABEL</span><h3>라벨링 비용</h3><p>클릭 두 번의 박스 vs 윤곽을 따라 수십 번 클릭하는 마스크</p><div class="cost-meter"><i style="width:88%"></i></div></article>
+          <article><b>02</b><span>COMPUTE</span><h3>계산량</h3><p>마스크 head와 픽셀 단위 출력, 해상도 복원이 더 필요</p><div class="cost-meter"><i style="width:72%"></i></div></article>
+          <article><b>03</b><span>UNCERTAINTY</span><h3>경계 불확실성</h3><p>논쟁은 가장자리 몇 픽셀에서 생기고, 업무는 그 가장자리를 사용</p><div class="cost-meter"><i style="width:80%"></i></div></article>
+        </div>
+        <aside class="speaker-note"><b>2분</b> 정밀도에는 라벨·계산·불확실성이라는 세 가지 청구서가 붙는다고 요약합니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="SEGMENTATION" data-title="프롬프트 분할" aria-hidden="true">
+        <div class="slide-no">25 / PROMPT</div>
+        <div class="split">
+          <div>
+            <p class="kicker">SEGMENT ANYTHING</p>
+            <h2>윤곽을 처음부터 칠하지 말고<br /><em>점·박스로 지시</em>한다</h2>
+            <p class="big-copy">SAM은 사람이 준 점이나 박스를 바탕으로 마스크 후보를 제안해 라벨링 초안을 빠르게 만듭니다.</p>
+            <div class="version-chips"><span>2023 · SAM</span><span>2024 · SAM 2 영상</span><span>이후 · 지시 방식 확장</span></div>
+          </div>
+          <div class="prompt-seg">
+            <div class="prompt-object"></div>
+            <div class="prompt-box"></div>
+            <div class="prompt-point">+</div>
+            <div class="prompt-mask"></div>
+            <span>제안 → 사람이 수정</span>
+          </div>
+        </div>
+        <div class="fineprint">주의: 경계를 찾는 것과 대상의 의미·사용 적합성을 확정하는 것은 다릅니다. 도메인이 달라지면 별도 검증이 필요합니다.</div>
+        <aside class="speaker-note"><b>2분</b> SAM을 만능 자동 라벨러가 아니라 ‘초안 생성 도구’로 소개하고, 의료·산업·위성 영상은 별도 검증한다고 말합니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="SEGMENTATION" data-title="마스크와 편향" aria-hidden="true">
+        <div class="slide-no">26 / RESPONSIBILITY</div>
+        <h2>마스크는 픽셀 단위의 <em>주장</em></h2>
+        <div class="bias-math">
+          <div class="bias-shape"><div class="true-shape"></div><div class="pred-shape"></div><span>평균 2px 바깥쪽</span></div>
+          <div class="bias-equation">
+            <p>둘레 <b>400px</b> × 바깥 오차 <b>2px</b></p>
+            <strong>≈ 800px 과대</strong>
+            <p>실제 손상 8,000px라면 <em>약 10% 과대 산정</em></p>
+          </div>
+        </div>
+        <div class="two-guards">
+          <span><b>01</b> 사람이 잰 값과 정기 대조</span>
+          <span><b>02</b> 경계 오차의 방향·크기 보정</span>
+        </div>
+        <aside class="speaker-note"><b>3분</b> 면적을 돈이나 판정으로 바꾸는 순간 작은 경계 편향이 반복적으로 큰 손실을 만든다고 설명합니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="SEGMENTATION" data-title="마스크 지표" aria-hidden="true">
+        <div class="slide-no">27 / METRICS</div>
+        <h2>같은 겹침, <em>다른 숫자</em></h2>
+        <div class="metric-formulas">
+          <article><span>MASK IoU</span><div>겹침 / (예측 + 정답 − 겹침)</div><b>60 / 120 = 0.50</b></article>
+          <article><span>DICE</span><div>(2 × 겹침) / (예측 + 정답)</div><b>120 / 180 ≈ 0.67</b></article>
+        </div>
+        <div class="metric-case"><span>예측 80px</span><span>정답 100px</span><span>겹침 60px</span></div>
+        <div class="warning-banner">Dice는 구조상 IoU보다 크거나 같다. <b>서로 다른 지표를 섞어 비교하지 말 것.</b></div>
+        <aside class="speaker-note"><b>4분</b> 탐지 IoU와 원리는 같되 박스 대신 픽셀 집합을 쓴다고 설명하고, 같은 결과도 지표에 따라 숫자가 달라진다는 점을 계산합니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="SEGMENTATION" data-title="지표의 함정" aria-hidden="true">
+        <div class="slide-no">28 / TRAPS</div>
+        <h2>99% 정확도인데 <em>쓸모없을 수 있다</em></h2>
+        <div class="accuracy-trap">
+          <div class="pixel-field"><i></i><span>대상 1%</span></div>
+          <div class="trap-copy">
+            <p>대상이 화면의 1%일 때<br />전부 배경이라고 답하면</p>
+            <strong>픽셀 정확도 99%</strong>
+            <small>하지만 대상 재현율은 0%</small>
+          </div>
+        </div>
+        <div class="metric-row">
+          <span><b>전체 영역</b> Mask IoU · Dice</span>
+          <span><b>희소 대상</b> 클래스별 재현율 함께</span>
+          <span><b>경계 업무</b> Boundary IoU</span>
+        </div>
+        <aside class="speaker-note"><b>3분</b> 면적·치수·절단선 업무에서는 전체 IoU보다 경계 주변 띠의 겹침을 보는 Boundary IoU가 더 가깝다고 설명합니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="SEGMENTATION" data-title="경계 정의서" aria-hidden="true">
+        <div class="slide-no">29 / STANDARD</div>
+        <h2>첫 문서는 모델 비교표가 아니라<br /><em>경계 정의서</em></h2>
+        <div class="definition-layout">
+          <div class="bad-good">
+            <article class="bad"><span>BAD · 형용사</span><del>심한 부식</del><del>큰 균열</del><del>애매하면 적당히</del></article>
+            <article class="good"><span>GOOD · 관찰 기준</span><b>손톱으로 긁어 요철이 느껴지는 범위</b><b>폭 1mm 이상인 균열</b><b>그늘 속 불가시 구간은 끊어서 표시</b></article>
+          </div>
+          <div class="definition-check">
+            <h3>정의서 3문장</h3>
+            <p><b>포함</b> 무엇을 대상에 넣나?</p>
+            <p><b>제외</b> 무엇을 빼나?</p>
+            <p><b>애매</b> 보이지 않을 때 어떻게 하나?</p>
+          </div>
+        </div>
+        <blockquote>기준을 쓸 사람은 모델을 아는 사람이 아니라 <b>업무를 아는 사람</b>이다.</blockquote>
+        <aside class="speaker-note"><b>3분</b> 기준이 없으면 데이터가 늘수록 모순도 늘어난다고 강조합니다. 학생들에게 본인 도메인의 애매한 경계 예시를 하나 물어봅니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="SYNTHESIS" data-title="탐지와 분할 비교" aria-hidden="true">
+        <div class="slide-no">30 / SYNTHESIS</div>
+        <h2>정밀도의 계단이 아니라 <em>서로 다른 질문</em></h2>
+        <div class="final-compare">
+          <article class="detect-card">
+            <span>DETECTION</span><h3>“여기를 보세요”</h3>
+            <p>빠른 위치 후보</p>
+            <dl><div><dt>핵심 결정</dt><dd>신뢰도 임계값</dd></div><div><dt>검증 자</dt><dd>박스 IoU</dd></div><div><dt>주요 책임</dt><dd>어떤 실수를 감수할지</dd></div></dl>
+          </article>
+          <article class="segment-card">
+            <span>SEGMENTATION</span><h3>“여기까지입니다”</h3>
+            <p>픽셀 단위 선언</p>
+            <dl><div><dt>핵심 결정</dt><dd>경계 정의</dd></div><div><dt>검증 자</dt><dd>Mask·Boundary IoU</dd></div><div><dt>주요 책임</dt><dd>오차 방향과 환산 영향</dd></div></dl>
+          </article>
+        </div>
+        <aside class="speaker-note"><b>2분</b> 이 슬라이드는 전체 섹션의 핵심입니다. 두 문장을 참석자와 함께 소리 내어 읽어도 좋습니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="SYNTHESIS" data-title="업무 체크리스트" aria-hidden="true">
+        <div class="slide-no">31 / CHECKLIST</div>
+        <h2>모델을 고르기 전, <em>질문부터 고정</em></h2>
+        <ol class="decision-list">
+          <li><b>01</b><span>원하는 답은 <strong>이름·박스·마스크</strong> 중 무엇인가?</span></li>
+          <li><b>02</b><span>놓침과 헛짚음 중 <strong>어느 비용</strong>이 더 큰가?</span></li>
+          <li><b>03</b><span>정답 기준과 <strong>IoU·Dice·Boundary IoU</strong> 중 무엇을 쓸까?</span></li>
+          <li><b>04</b><span>자동 처리·사람 검토·제외의 <strong>운영 구간</strong>은?</span></li>
+          <li><b>05</b><span>결과를 면적·금액·판정으로 바꿀 때 <strong>오차 방향</strong>은?</span></li>
+        </ol>
+        <aside class="speaker-note"><b>2분</b> 이 체크리스트를 실제 프로젝트 회의의 시작 질문으로 써도 된다고 안내합니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="QUIZ" data-title="쪽집게 예상문제" aria-hidden="true">
+        <div class="slide-no">32 / QUICK QUIZ</div>
+        <h2>쪽집게 예상문제 <em>5</em></h2>
+        <div class="rapid-quiz">
+          <details><summary><b>Q1</b> 탐지 결과의 세 요소는?</summary><p>label, box, score. 실무에서는 decision까지 붙입니다.</p></details>
+          <details><summary><b>Q2</b> IoU 0.53은 정답인가?</summary><p>그 자체로는 모릅니다. 정답 문턱이 0.50이면 통과, 0.75면 탈락입니다.</p></details>
+          <details><summary><b>Q3</b> 임계값을 낮추면 항상 총 오류가 같은가?</summary><p>아닙니다. 보통 미탐은 줄고 오탐은 늘 가능성이 있지만, FP+FN 합계가 보존되는 법칙은 없습니다.</p></details>
+          <details><summary><b>Q4</b> 사람 3명을 각각 세려면 어떤 분할?</summary><p>인스턴스 분할. 시맨틱 분할은 같은 종류를 한 덩어리로 칠합니다.</p></details>
+          <details><summary><b>Q5</b> 결함이 1%일 때 픽셀 정확도만 보면 위험한 이유?</summary><p>전부 배경이라고 해도 99%가 나올 수 있어 대상 성능을 가립니다.</p></details>
+        </div>
+        <aside class="speaker-note"><b>5분</b> 한 문제당 30초 생각, 30초 답 확인. 답을 외우기보다 이유 한 문장을 말하게 합니다.</aside>
+      </section>
+
+      <section class="slide duel" data-chapter="DUEL" data-title="모의대결 1" aria-hidden="true">
+        <div class="duel-head"><span>MOCK DUEL · 01</span><b>2분 상의 + 3분 답변</b></div>
+        <h2>IoU를 계산하고 판정하라</h2>
+        <div class="duel-question">
+          <p>예측 박스와 정답 박스의 면적은 각각 <b>400</b>, 겹친 면적은 <b>240</b>이다.</p>
+          <ol><li>IoU를 계산하라.</li><li>정답 문턱이 0.5일 때 통과 여부를 말하라.</li><li>이 숫자만으로 신뢰도 score의 적절성도 판단할 수 있는가?</li></ol>
+        </div>
+        <button class="reveal-button large" data-reveal="duel-answer-1">모범답안 열기</button>
+        <div class="answer duel-answer" id="duel-answer-1"><b>IoU = 240 / (400 + 400 − 240) = 240 / 560 ≈ 0.43 → 탈락</b><p>IoU는 정답 박스와의 위치 겹침, score는 모델 내부 적합도이므로 이 정보만으로 score의 적절성까지 판단할 수 없습니다.</p></div>
+        <aside class="speaker-note"><b>모의대결</b> 답변자는 계산식 → 판정 → score와 IoU의 차이 순서로 말하면 깔끔합니다.</aside>
+      </section>
+
+      <section class="slide duel" data-chapter="DUEL" data-title="모의대결 2" aria-hidden="true">
+        <div class="duel-head"><span>MOCK DUEL · 02</span><b>2분 상의 + 3분 답변</b></div>
+        <h2>업무에 맞는 출력과 정책을 설계하라</h2>
+        <div class="duel-question">
+          <p>공장 CCTV로 <b>위험 구역에 사람이 들어왔는지</b> 감시한다. 놓치면 사고 위험이 크지만 오탐은 관제자가 다시 확인할 수 있다.</p>
+          <ol><li>탐지와 분할 중 무엇으로 시작할까?</li><li>신뢰도 임계값은 어느 방향에서 시작할까?</li><li>자동화 운영 구간을 어떻게 나눌까?</li></ol>
+        </div>
+        <button class="reveal-button large" data-reveal="duel-answer-2">모범답안 열기</button>
+        <div class="answer duel-answer" id="duel-answer-2"><b>대략적 위치와 존재 확인이면 탐지부터, 임계값은 낮은 선에서 시작</b><p>높은 점수는 경보, 중간은 관제자 검토, 매우 낮은 점수는 제외하되 라벨 표본으로 실제 미탐·오탐 비용을 비교해 선을 조정합니다.</p></div>
+        <aside class="speaker-note"><b>모의대결</b> ‘낮은 임계값’만 말하지 말고, 놓침 비용과 사람 검토가 가능하다는 업무 근거를 붙여야 만점입니다.</aside>
+      </section>
+
+      <section class="slide duel" data-chapter="DUEL" data-title="모의대결 3" aria-hidden="true">
+        <div class="duel-head"><span>MOCK DUEL · 03</span><b>2분 상의 + 3분 답변</b></div>
+        <h2>분할 프로젝트의 첫 문서를 써라</h2>
+        <div class="duel-question">
+          <p>콘크리트 사진에서 균열 면적을 계산하려 한다. 작업자마다 미세 실금과 얼룩의 포함 여부가 다르다.</p>
+          <ol><li>모델 비교 전에 무엇을 만들어야 하나?</li><li>“큰 균열”이 왜 나쁜 기준인가?</li><li>어떤 지표를 함께 볼까?</li></ol>
+        </div>
+        <button class="reveal-button large" data-reveal="duel-answer-3">모범답안 열기</button>
+        <div class="answer duel-answer" id="duel-answer-3"><b>포함·제외·애매 상황을 관찰 가능한 문장으로 적은 경계 정의서</b><p>‘큰’은 사람마다 해석이 다르므로 “폭 1mm 이상”처럼 씁니다. Mask IoU와 함께 면적·절단선 품질에 가까운 Boundary IoU, 오차 방향도 확인합니다.</p></div>
+        <aside class="speaker-note"><b>모의대결</b> 경계 정의를 도메인 전문가가 써야 한다는 문장까지 덧붙이면 좋습니다.</aside>
+      </section>
+
+      <section class="slide" data-chapter="QUIZ" data-title="채점 루브릭" aria-hidden="true">
+        <div class="slide-no">36 / ANSWER FRAME</div>
+        <h2>3분 답변은 이 순서로</h2>
+        <div class="answer-frame">
+          <article><b>1</b><span>결론</span><p>박스 / 마스크 / 낮은 임계값처럼 먼저 답한다.</p></article>
+          <article><b>2</b><span>근거</span><p>업무가 요구한 출력과 실수 비용을 연결한다.</p></article>
+          <article><b>3</b><span>검증</span><p>정답 라벨·IoU·Dice·Boundary IoU를 붙인다.</p></article>
+          <article><b>4</b><span>책임</span><p>사람 검토·경계 정의·오차 방향을 말한다.</p></article>
+        </div>
+        <div class="rubric">
+          <span><i>4점</i> 결론 정확</span><span><i>3점</i> 업무 근거</span><span><i>2점</i> 지표·문턱</span><span><i>1점</i> 운영 책임</span>
+        </div>
+        <aside class="speaker-note"><b>2분</b> 팀원 3명이 각 문제의 대표 답변자가 되어야 하므로 한 사람씩 이 프레임으로 30초 요약 연습을 권합니다.</aside>
+      </section>
+
+      <section class="slide closing" data-chapter="CLOSING" data-title="마무리" aria-hidden="true">
+        <div class="eyebrow"><span>ONE MINUTE SUMMARY</span><span>SECTION 03</span></div>
+        <h2>답의 모양을 먼저 정하면<br /><em>자를 댈 수 있다</em></h2>
+        <div class="closing-lines">
+          <p><span>박스</span> “여기를 보세요” — 후보와 위치</p>
+          <p><span>마스크</span> “여기까지입니다” — 픽셀 경계</p>
+          <p><span>임계값</span> 어떤 실수를 감수할지 정하는 정책</p>
+          <p><span>경계 정의</span> 모델보다 먼저 업무 전문가가 쓰는 기준</p>
+        </div>
+        <div class="closing-question">이제 여러분의 업무 질문에는<br /><b>어떤 모양의 답</b>이 필요하나요?</div>
+        <aside class="speaker-note"><b>3분</b> 네 문장을 요약하고 질문을 받습니다. 마지막에는 ‘기술 선택 이전에 업무 질문을 고정한다’는 메시지로 닫습니다.</aside>
+      </section>
+    </main>
+
+    <footer class="deck-footer">
+      <div class="progress"><i id="progressBar"></i></div>
+      <div class="footer-copy"><span id="slideTitle">표지</span><small>← → / SPACE로 이동 · O 전체보기 · N 노트</small></div>
+      <div class="nav-buttons">
+        <button id="prevButton" aria-label="이전 슬라이드">←</button>
+        <button id="nextButton" aria-label="다음 슬라이드">→</button>
+      </div>
+    </footer>
+
+    <dialog class="overview" id="overviewDialog">
+      <div class="overview-head"><div><span>SLIDE MAP</span><h2>전체 보기</h2></div><button id="overviewClose" aria-label="전체 보기 닫기">×</button></div>
+      <div class="overview-grid" id="overviewGrid"></div>
+    </dialog>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
