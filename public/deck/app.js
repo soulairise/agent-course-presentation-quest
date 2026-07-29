@@ -7,6 +7,7 @@ const slideTitle = document.getElementById("slideTitle");
 const prevButton = document.getElementById("prevButton");
 const nextButton = document.getElementById("nextButton");
 const notesButton = document.getElementById("notesButton");
+const themeButton = document.getElementById("themeButton");
 const fullscreenButton = document.getElementById("fullscreenButton");
 const overviewButton = document.getElementById("overviewButton");
 const overviewDialog = document.getElementById("overviewDialog");
@@ -17,6 +18,9 @@ let index = Math.max(0, Math.min(slides.length - 1, Number(location.hash.replace
 let touchStartX = 0;
 
 totalNumber.textContent = String(slides.length).padStart(2, "0");
+
+const savedTheme = localStorage.getItem("deck-theme");
+if (savedTheme) document.documentElement.dataset.theme = savedTheme;
 
 function showSlide(nextIndex, updateHash = true) {
   index = Math.max(0, Math.min(slides.length - 1, nextIndex));
@@ -46,6 +50,13 @@ function toggleNotes() {
   notesButton.setAttribute("aria-pressed", String(visible));
 }
 
+function toggleTheme() {
+  const current = document.documentElement.dataset.theme;
+  const next = current === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem("deck-theme", next);
+}
+
 slides.forEach((slide, slideIndex) => {
   const button = document.createElement("button");
   button.innerHTML = `<b>${String(slideIndex + 1).padStart(2, "0")}</b><span>${slide.dataset.chapter}</span><strong>${slide.dataset.title}</strong>`;
@@ -68,6 +79,7 @@ document.querySelectorAll(".reveal-button").forEach((button) => {
 prevButton.addEventListener("click", () => showSlide(index - 1));
 nextButton.addEventListener("click", () => showSlide(index + 1));
 notesButton.addEventListener("click", toggleNotes);
+themeButton.addEventListener("click", toggleTheme);
 overviewButton.addEventListener("click", () => overviewDialog.showModal());
 overviewClose.addEventListener("click", () => overviewDialog.close());
 fullscreenButton.addEventListener("click", () => {
@@ -95,6 +107,8 @@ document.addEventListener("keydown", (event) => {
     overviewDialog.open ? overviewDialog.close() : overviewDialog.showModal();
   } else if (event.key.toLowerCase() === "n") {
     toggleNotes();
+  } else if (event.key.toLowerCase() === "t") {
+    toggleTheme();
   } else if (event.key === "Escape" && overviewDialog.open) {
     overviewDialog.close();
   }

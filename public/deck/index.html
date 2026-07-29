@@ -3,12 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0a0e14" />
+    <meta name="theme-color" content="#faf8f4" />
     <meta
       name="description"
       content="객체 탐지, IoU, 임계값, 이미지 분할과 경계 책임을 이해하는 60분 인터랙티브 발표자료"
     />
     <title>찾아내기와 경계 긋기 | 섹션 3 발표자료</title>
+    <meta property="og:title" content="찾아내기와 경계 긋기" />
+    <meta property="og:description" content="객체 탐지 · IoU · 이미지 분할을 이해하는 60분 인터랙티브 발표자료" />
+    <meta property="og:image" content="https://soulairise.github.io/agent-course-presentation-quest/og.png" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -25,9 +30,10 @@
       </button>
       <div class="chapter-pill" id="chapterPill">OPENING</div>
       <div class="header-actions">
-        <button class="icon-button" id="notesButton" aria-pressed="false" title="발표자 노트">N</button>
-        <button class="icon-button" id="fullscreenButton" title="전체 화면">↗</button>
-        <span class="counter"><b id="currentNumber">01</b><i>/</i><span id="totalNumber">37</span></span>
+        <button class="icon-button action-button" id="notesButton" aria-pressed="false" title="발표자 노트">🗒 대본</button>
+        <button class="icon-button" id="themeButton" title="밝은/어두운 테마">🌗</button>
+        <button class="icon-button" id="fullscreenButton" title="전체 화면">⛶</button>
+        <span class="counter"><b id="currentNumber">01</b><i>/</i><span id="totalNumber">38</span></span>
       </div>
     </header>
 
@@ -678,7 +684,7 @@
 
     <footer class="deck-footer">
       <div class="progress"><i id="progressBar"></i></div>
-      <div class="footer-copy"><span id="slideTitle">표지</span><small>← → / SPACE로 이동 · O 전체보기 · N 노트</small></div>
+      <div class="footer-copy"><span id="slideTitle">표지</span><small>← → / SPACE 이동 · O 전체보기 · N 대본 · T 테마</small></div>
       <div class="nav-buttons">
         <button id="prevButton" aria-label="이전 슬라이드">←</button>
         <button id="nextButton" aria-label="다음 슬라이드">→</button>
