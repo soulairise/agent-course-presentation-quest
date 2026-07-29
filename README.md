@@ -21,3 +21,4 @@ AI 에이전트 과정 섹션 3의 60분 인터랙티브 발표자료입니다.
 - 우측 상단 `↗`: 전체 화면
 
 GitHub Pages용 정적 발표자료는 `docs/`에 있습니다.
+`main` 브랜치에 반영되면 포함된 GitHub Actions 작업이 `docs/`를 Pages에 배포합니다.
